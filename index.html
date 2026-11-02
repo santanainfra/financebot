@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinanceBot - Gestão Financeira Inteligente / Desenvolvida pelo Analista Flávio Santana</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          animation: {
+            'bounce-slow': 'bounce 3s infinite',
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 4s ease-in-out infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased bg-slate-900 text-slate-100 flex flex-col min-h-screen">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 shrink-0">
+          <i class="fa-solid me-0 fa-robot text-lg sm:text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent leading-tight">FinanceBot</h1>
+          <p class="text-[10px] sm:text-xs text-slate-400 hidden xs:block">Consultor Financeiro Interativo</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-3">
+        <!-- Status indicator -->
+        <div id="statusBadge" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 sm:gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+          <span id="statusBadgeText" class="truncate max-w-[100px] sm:max-w-none">Aguardando Dados</span>
+        </div>
+        
+        <!-- Audio Mute/Unmute Toggle Button -->
+        <button id="voiceToggleBtn" onclick="toggleVoice()" class="p-2 sm:px-3 sm:py-1.5 text-xs text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg transition-all border border-cyan-500/30 flex items-center gap-1.5 font-medium" title="Alternar Voz">
+          <i id="voiceToggleIcon" class="fa-solid fa-volume-high"></i> 
+          <span id="voiceToggleText" class="hidden md:inline">Voz Ativa</span>
+        </button>
+
+        <button onclick="resetData()" class="p-2 sm:px-3 sm:py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 rounded-lg transition-all border border-slate-700 flex items-center gap-1" title="Reiniciar Dados">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span class="hidden md:inline">Reiniciar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+    <!-- ALERT BANNER (Dinâmico) -->
+    <div id="alertBanner" class="hidden p-3.5 sm:p-4 rounded-xl border flex items-start sm:items-center gap-3 sm:gap-4 transition-all duration-300">
+      <div id="alertBannerIcon" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-base sm:text-lg shrink-0 mt-0.5 sm:mt-0"></div>
+      <div class="flex-1 min-w-0">
+        <h4 id="alertBannerTitle" class="font-bold text-xs sm:text-sm truncate"></h4>
+        <p id="alertBannerMessage" class="text-[11px] sm:text-xs mt-0.5 opacity-90 leading-relaxed"></p>
+      </div>
+    </div>
+
+    <!-- METRICS DASHBOARD CARDS -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <!-- Card: Orçamento Inicial -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+        <div class="flex items-center justify-between mb-1.5 sm:mb-2">
+          <span class="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider truncate">Valor Inicial</span>
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-wallet text-xs sm:text-sm"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1 sm:gap-2">
+          <span class="text-lg sm:text-2xl font-bold text-slate-100 truncate" id="cardInitialValue">R$ 0,00</span>
+        </div>
+        <p class="text-[10px] sm:text-xs text-slate-500 mt-1 sm:mt-2 truncate">Renda do período</p>
+      </div>
+
+      <!-- Card: Total Gasto -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+        <div class="flex items-center justify-between mb-1.5 sm:mb-2">
+          <span class="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider truncate">Total Gasto</span>
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-arrow-trend-down text-xs sm:text-sm"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1 sm:gap-2">
+          <span class="text-lg sm:text-2xl font-bold text-rose-400 truncate" id="cardTotalSpent">R$ 0,00</span>
+        </div>
+        <p class="text-[10px] sm:text-xs text-slate-500 mt-1 sm:mt-2 truncate" id="cardExpensesCount">0 lançamentos</p>
+      </div>
+
+      <!-- Card: Saldo Restante -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+        <div class="flex items-center justify-between mb-1.5 sm:mb-2">
+          <span class="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider truncate">Saldo Livre</span>
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0" id="cardBalanceIcon">
+            <i class="fa-solid fa-piggy-bank text-xs sm:text-sm"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1 sm:gap-2">
+          <span class="text-lg sm:text-2xl font-bold text-emerald-400 truncate" id="cardRemainingBalance">R$ 0,00</span>
+        </div>
+        <p class="text-[10px] sm:text-xs text-slate-500 mt-1 sm:mt-2 truncate" id="cardBalancePercentage">0% disponível</p>
+      </div>
+
+      <!-- Card: Nível de Comprometimento -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+        <div class="flex items-center justify-between mb-1.5 sm:mb-2">
+          <span class="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider truncate">Consumido</span>
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-chart-pie text-xs sm:text-sm"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1 sm:gap-2">
+          <span class="text-lg sm:text-2xl font-bold text-purple-400 truncate" id="cardUsagePercentage">0%</span>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-700 h-1.5 sm:h-2 rounded-full mt-2 sm:mt-3 overflow-hidden">
+          <div id="usageProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN GRID: ROBOT ASSISTANT & CHART/INPUT -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+
+      <!-- LEFT SIDE: INPUT FORM & ROBOT CHAT (4 cols) -->
+      <div class="lg:col-span-4 space-y-4 sm:space-y-6">
+
+        <!-- CONFIG & INPUT CARD -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+          <h2 class="text-sm sm:text-base font-semibold text-slate-200 mb-3 sm:mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-cyan-400"></i> Lançamentos & Ajustes
+          </h2>
+
+          <form id="financeForm" onsubmit="handleAddTransaction(event)" class="space-y-3 sm:space-y-4">
+            
+            <!-- Valor Inicial -->
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Renda / Valor Inicial (R$)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-medium text-sm">R$</span>
+                <input type="number" step="0.01" min="0" id="initialBudgetInput" placeholder="Informe seu valor inicial..." 
+                  class="w-full pl-10 pr-3 py-2 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                  oninput="updateInitialBudget(this.value)">
+              </div>
+            </div>
+
+            <hr class="border-slate-700/50 my-1.5 sm:my-2">
+
+            <!-- Registrar Gasto -->
+            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Adicionar Novo Gasto</p>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Descrição</label>
+              <input type="text" id="expenseDesc" placeholder="Ex: Mercado, Luz" required
+                class="w-full px-3 py-2 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Valor (R$)</label>
+                <input type="number" step="0.01" min="0.01" id="expenseValue" placeholder="0,00" required
+                  class="w-full px-3 py-2 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
+                <select id="expenseCategory" 
+                  class="w-full px-3 py-2 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+                  <option value="Alimentação">🍔 Alimentação</option>
+                  <option value="Moradia">🏠 Moradia</option>
+                  <option value="Transporte">🚗 Transporte</option>
+                  <option value="Lazer">🎉 Lazer</option>
+                  <option value="Saúde">⚕️ Saúde</option>
+                  <option value="Educação">📚 Educação</option>
+                  <option value="Outros">📦 Outros</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Data do Consumo</label>
+              <input type="date" id="expenseDate" required
+                class="w-full px-3 py-2 bg-slate-900/80 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+            </div>
+
+            <button type="submit" class="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-cyan-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[44px]">
+              <i class="fa-solid fa-plus"></i> Registrar Gasto
+            </button>
+          </form>
+        </div>
+
+        <!-- ROBOT ASSISTANT INTERACTIVE CONTAINER -->
+        <div class="bg-gradient-to-b from-slate-800/80 to-slate-900/80 border border-slate-700/60 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-700/60 pb-2.5 sm:pb-3 mb-3 sm:mb-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5 sm:gap-2">
+              <i class="fa-solid fa-headset"></i> Robô Assistente
+            </span>
+            <span id="botMoodTag" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+              Pronto 😊
+            </span>
+          </div>
+
+          <!-- ROBOT CHARACTER AVATAR -->
+          <div class="flex flex-col items-center my-1 sm:my-2">
+            <div class="relative mb-3 animate-float">
+              <!-- Robot Head Container -->
+              <div id="robotAvatar" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-800 border-2 border-cyan-400 flex flex-col items-center justify-center shadow-lg shadow-cyan-500/20 transition-all duration-300 relative">
+                <!-- Antenna -->
+                <div class="absolute -top-3.5 sm:-top-4 w-2 h-3.5 sm:h-4 bg-slate-700 rounded-full flex items-start justify-center">
+                  <div id="robotAntennaLight" class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-cyan-400 animate-ping"></div>
+                </div>
+                <!-- Eyes -->
+                <div class="flex gap-3 sm:gap-4 mb-1.5 sm:mb-2">
+                  <div id="robotEyeLeft" class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-cyan-300 flex items-center justify-center transition-all duration-300">
+                    <div class="w-1.5 h-1.5 rounded-full bg-slate-900"></div>
+                  </div>
+                  <div id="robotEyeRight" class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-cyan-300 flex items-center justify-center transition-all duration-300">
+                    <div class="w-1.5 h-1.5 rounded-full bg-slate-900"></div>
+                  </div>
+                </div>
+                <!-- Mouth -->
+                <div id="robotMouth" class="w-7 sm:w-8 h-1.5 bg-cyan-400 rounded-full transition-all duration-300"></div>
+              </div>
+
+              <!-- Speaking Audio Waves Indicator Badge -->
+              <div id="speechWaves" class="hidden absolute -right-2 -top-2 bg-cyan-500 text-slate-900 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs animate-bounce shadow-lg">
+                <i class="fa-solid fa-waveform"></i>
+              </div>
+            </div>
+
+            <!-- Speech Bubble -->
+            <div class="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3 sm:p-3.5 relative shadow-inner">
+              <div class="absolute -top-2 left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-b-8 border-b-slate-900/90"></div>
+              <p id="botSpeech" class="text-xs text-slate-200 leading-relaxed font-medium text-center">
+                "Olá! Informe seu valor inicial e registre suas transações para começar o monitoramento financeiro!"
+              </p>
+              
+              <!-- Replay Speech Button -->
+              <div class="flex justify-end mt-2">
+                <button onclick="repeatSpeech()" title="Ouvir novamente" class="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 bg-cyan-500/10 px-2.5 py-1 rounded-md hover:bg-cyan-500/20 transition-all active:scale-95">
+                  <i class="fa-solid fa-volume-high"></i> Falar Agora
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUICK ACTION BUTTONS FOR BOT -->
+          <div class="mt-3 sm:mt-4 grid grid-cols-2 gap-2">
+            <button onclick="askBotForAdvice('rule')" class="px-2.5 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[11px] text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 min-h-[38px] active:scale-95">
+              <i class="fa-solid fa-pie-chart text-cyan-400"></i> Regra 50/30/20
+            </button>
+            <button onclick="askBotForAdvice('emergency')" class="px-2.5 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[11px] text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 min-h-[38px] active:scale-95">
+              <i class="fa-solid fa-shield-halved text-emerald-400"></i> Reserva
+            </button>
+            <button onclick="askBotForAdvice('cut')" class="px-2.5 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[11px] text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 min-h-[38px] active:scale-95">
+              <i class="fa-solid fa-scissors text-amber-400"></i> Onde Cortar?
+            </button>
+            <button onclick="askBotForAdvice('status')" class="px-2.5 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[11px] text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 min-h-[38px] active:scale-95">
+              <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i> Diagnóstico
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT SIDE: CHART & TABLE (8 cols) -->
+      <div class="lg:col-span-8 space-y-4 sm:space-y-6">
+
+        <!-- INTERACTIVE CHART CONTAINER -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5 relative">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+            <div>
+              <h2 class="text-sm sm:text-base font-semibold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-cyan-400"></i> Consumo Real no Tempo
+              </h2>
+              <p class="text-[11px] sm:text-xs text-slate-400">Acompanhe a trajetória do saldo e gastos acumulados</p>
+            </div>
+            
+            <!-- Chart Legend Badges -->
+            <div class="flex items-center gap-3 text-[11px] sm:text-xs">
+              <span class="flex items-center gap-1.5 text-slate-300">
+                <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-cyan-400"></span> Saldo Restante
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-300">
+                <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-rose-500"></span> Gastos Acumulados
+              </span>
+            </div>
+          </div>
+
+          <!-- Chart Canvas Wrap (Fluid Height) -->
+          <div class="relative w-full h-[230px] sm:h-[300px] md:h-[320px]">
+            <canvas id="expensesChart"></canvas>
+          </div>
+        </div>
+
+        <!-- TRANSACTIONS TABLE CARD -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 class="text-sm sm:text-base font-semibold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-cyan-400"></i> Extrato de Transações
+            </h2>
+            <span id="transactionsCountBadge" class="text-[11px] sm:text-xs bg-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-medium">
+              0 itens
+            </span>
+          </div>
+
+          <!-- Responsive Table Container -->
+          <div class="overflow-x-auto max-h-[300px] overflow-y-auto rounded-xl border border-slate-700/50">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider sticky top-0 border-b border-slate-700 text-[10px] sm:text-xs">
+                <tr>
+                  <th class="py-2.5 px-3 sm:px-4 font-semibold">Data</th>
+                  <th class="py-2.5 px-3 sm:px-4 font-semibold">Descrição</th>
+                  <th class="py-2.5 px-3 sm:px-4 font-semibold">Categoria</th>
+                  <th class="py-2.5 px-3 sm:px-4 font-semibold text-right">Valor</th>
+                  <th class="py-2.5 px-3 sm:px-4 font-semibold text-center">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTableBody" class="divide-y divide-slate-700/50">
+                <!-- Dynamic rows injected here -->
+              </tbody>
+            </table>
+            
+            <!-- Empty state -->
+            <div id="emptyState" class="py-8 sm:py-12 text-center text-slate-500 px-4">
+              <i class="fa-regular fa-folder-open text-2xl sm:text-3xl mb-2 block"></i>
+              <span class="text-xs">Nenhum gasto registrado ainda. Adicione uma transação no formulário!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CURRENCY EXCHANGE & REAL-TIME SIMULATOR CARD -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm sm:text-base font-semibold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-coins text-amber-400"></i> Cotações & Simulador de Câmbio
+              </h2>
+              <p class="text-[11px] sm:text-xs text-slate-400">Dólar e Euro em tempo real para simular compras</p>
+            </div>
+            <button onclick="fetchCurrencyRates()" title="Atualizar Cotações" class="px-2.5 py-1.5 text-xs bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-600/60 transition-all flex items-center gap-1.5 shrink-0 active:scale-95">
+              <i id="refreshRatesIcon" class="fa-solid fa-rotate text-cyan-400"></i> <span class="hidden sm:inline">Atualizar</span>
+            </button>
+          </div>
+
+          <!-- Currency Live Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- USD Card -->
+            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-3 sm:p-3.5 flex items-center justify-between">
+              <div class="flex items-center gap-2.5 sm:gap-3">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
+                  US$
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-slate-300">Dólar Comercial</div>
+                  <div class="text-[10px] text-slate-500" id="usdVar">Var: --</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm sm:text-base font-bold text-emerald-400" id="usdPrice">R$ --</div>
+                <div class="text-[9px] sm:text-[10px] text-slate-500" id="usdUpdateTime">Atualizado agora</div>
+              </div>
+            </div>
+
+            <!-- EUR Card -->
+            <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-3 sm:p-3.5 flex items-center justify-between">
+              <div class="flex items-center gap-2.5 sm:gap-3">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
+                  €
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-slate-300">Euro Comercial</div>
+                  <div class="text-[10px] text-slate-500" id="eurVar">Var: --</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm sm:text-base font-bold text-blue-400" id="eurPrice">R$ --</div>
+                <div class="text-[9px] sm:text-[10px] text-slate-500" id="eurUpdateTime">Atualizado agora</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive FX Simulator Form -->
+          <div class="bg-slate-900/40 border border-slate-700/50 rounded-xl p-3.5 sm:p-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2.5 sm:mb-3 flex items-center gap-1.5">
+              <i class="fa-solid fa-calculator text-cyan-400"></i> Simular Compra de Moeda
+            </h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-medium text-slate-400 mb-1">Moeda Desejada</label>
+                <select id="simCurrency" onchange="calculateExchangeSimulation()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-cyan-500 transition-all">
+                  <option value="USD">🇺🇸 Dólar (USD)</option>
+                  <option value="EUR">🇪🇺 Euro (EUR)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-medium text-slate-400 mb-1">Quantidade Estrangeira</label>
+                <input type="number" id="simAmount" min="1" step="1" value="100" oninput="calculateExchangeSimulation()" placeholder="Ex: 100" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-cyan-500 transition-all">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-medium text-slate-400 mb-1">Custo Total (BRL)</label>
+                <div id="simTotalBrl" class="w-full px-3 py-2 bg-slate-800 border border-cyan-500/30 rounded-xl text-cyan-400 font-bold text-xs flex items-center justify-between">
+                  <span>R$ 0,00</span>
+                  <i class="fa-solid fa-arrow-right-arrow-left text-[10px] opacity-60"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Simulation Action Buttons -->
+            <div class="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800">
+              <span id="simSummaryText" class="text-xs text-slate-400">
+                Simulação: 100 USD = R$ 0,00
+              </span>
+              <button onclick="speakSimulationAdvice()" class="w-full sm:w-auto px-3 py-2 sm:py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 min-h-[38px] active:scale-95">
+                <i class="fa-solid fa-volume-high"></i> Pedir Parecer do Robô
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-950 border-t border-slate-800/80 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+      FinanceBot &copy; Controle Financeiro Pessoal Interativo | Dicas geradas com inteligência algorítmica | Desenvolvida pelo Analista Flávio Santana ® - Marca Registrada .
+    </div>
+  </footer>
+
+  <!-- APPLICATION LOGIC & CHART SCRIPT -->
+  <script>
+    // GLOBAL STATE (Inicia totalmente zerado)
+    let state = {
+      initialBudget: 0.00,
+      transactions: [],
+      voiceEnabled: true,
+      rates: {
+        USD: 5.65,
+        EUR: 6.10,
+        usdVar: '+0.00',
+        eurVar: '+0.00'
+      }
+    };
+
+    let chartInstance = null;
+    let speakingInterval = null;
+
+    // SPEECH SYNTHESIS ENGINE
+    function speakText(text) {
+      if (!state.voiceEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ');
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'pt-BR';
+      utterance.rate = 1.0;
+      utterance.pitch = 0.85;
+
+      const voices = window.speechSynthesis.getVoices();
+      const maleVoiceKeywords = ['daniel', 'antonio', 'guilherme', 'male', 'homem', 'masculino', 'jorge', 'ricardo'];
+      const ptVoices = voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt'));
+      
+      let chosenVoice = ptVoices.find(v => 
+        maleVoiceKeywords.some(keyword => v.name.toLowerCase().includes(keyword))
+      );
+
+      if (!chosenVoice && ptVoices.length > 0) {
+        chosenVoice = ptVoices[0];
+      }
+
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
+      }
+
+      utterance.onstart = function() { startTalkingAnimation(); };
+      utterance.onend = function() { stopTalkingAnimation(); };
+      utterance.onerror = function() { stopTalkingAnimation(); };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // TOGGLE VOICE MUTE / UNMUTE
+    function toggleVoice() {
+      state.voiceEnabled = !state.voiceEnabled;
+      const btnIcon = document.getElementById('voiceToggleIcon');
+      const btnText = document.getElementById('voiceToggleText');
+      const btn = document.getElementById('voiceToggleBtn');
+
+      if (state.voiceEnabled) {
+        btnIcon.className = "fa-solid fa-volume-high";
+        btnText.innerText = "Voz Ativa";
+        btn.className = "px-3 py-1.5 text-xs text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg transition-all border border-cyan-500/30 flex items-center gap-1.5 font-medium";
+        speakText("Sintetizador de voz ativado! Estarei pronto para ajudar.");
+      } else {
+        window.speechSynthesis.cancel();
+        stopTalkingAnimation();
+        btnIcon.className = "fa-solid fa-volume-xmark";
+        btnText.innerText = "Voz Muta";
+        btn.className = "px-3 py-1.5 text-xs text-slate-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all border border-slate-700 flex items-center gap-1.5 font-medium";
+      }
+    }
+
+    // REPEAT CURRENT SPEECH
+    function repeatSpeech() {
+      const speech = document.getElementById('botSpeech');
+      speakText(speech.innerText);
+    }
+
+    // ROBOT TALKING ANIMATION
+    function startTalkingAnimation() {
+      stopTalkingAnimation();
+      const mouth = document.getElementById('robotMouth');
+      const waves = document.getElementById('speechWaves');
+
+      if (waves) waves.classList.remove('hidden');
+
+      let step = 0;
+      speakingInterval = setInterval(() => {
+        step++;
+        if (mouth) {
+          if (step % 2 === 0) {
+            mouth.style.height = '8px';
+            mouth.style.width = '20px';
+          } else {
+            mouth.style.height = '3px';
+            mouth.style.width = '32px';
+          }
+        }
+      }, 150);
+    }
+
+    function stopTalkingAnimation() {
+      if (speakingInterval) {
+        clearInterval(speakingInterval);
+        speakingInterval = null;
+      }
+      const mouth = document.getElementById('robotMouth');
+      const waves = document.getElementById('speechWaves');
+
+      if (waves) waves.classList.add('hidden');
+      
+      const metrics = calculateMetrics();
+      updateBotMood(metrics);
+    }
+
+    // HELPER: CURRENCY FORMATTER
+    function formatCurrency(val) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    }
+
+    // INITIALIZATION ON PAGE LOAD
+    window.onload = function() {
+      // Set default date input to today
+      document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+      
+      // Clear initial budget field completely so the user inputs it
+      document.getElementById('initialBudgetInput').value = '';
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+
+      initChart();
+      fetchCurrencyRates();
+      updateApp();
+
+      setTimeout(() => {
+        speakText("Olá! Informe seu valor inicial e registre suas transações para começar o monitoramento financeiro!");
+      }, 500);
+    };
+
+    // UPDATE INITIAL BUDGET
+    function updateInitialBudget(val) {
+      const numVal = parseFloat(val);
+      if (!isNaN(numVal) && numVal >= 0) {
+        state.initialBudget = numVal;
+      } else {
+        state.initialBudget = 0.00;
+      }
+      updateApp();
+    }
+
+    // HANDLE ADD TRANSACTION
+    function handleAddTransaction(event) {
+      event.preventDefault();
+      
+      const descInput = document.getElementById('expenseDesc');
+      const valInput = document.getElementById('expenseValue');
+      const catInput = document.getElementById('expenseCategory');
+      const dateInput = document.getElementById('expenseDate');
+
+      const desc = descInput.value.trim();
+      const val = parseFloat(valInput.value);
+      const cat = catInput.value;
+      const date = dateInput.value;
+
+      if (!desc || isNaN(val) || val <= 0 || !date) return;
+
+      const newTx = {
+        id: Date.now().toString(),
+        description: desc,
+        value: val,
+        category: cat,
+        date: date
+      };
+
+      state.transactions.push(newTx);
+      state.transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      descInput.value = '';
+      valInput.value = '';
+
+      updateApp();
+      triggerBotReaction('add_expense', newTx);
+    }
+
+    // REMOVE TRANSACTION
+    function deleteTransaction(id) {
+      state.transactions = state.transactions.filter(t => t.id !== id);
+      updateApp();
+      triggerBotReaction('delete_expense');
+    }
+
+    // RESET ALL DATA
+    function resetData() {
+      state.initialBudget = 0;
+      state.transactions = [];
+      document.getElementById('initialBudgetInput').value = '';
+      updateApp();
+      triggerBotReaction('reset');
+    }
+
+    // CALCULATE FINANCIAL METRICS
+    function calculateMetrics() {
+      const totalSpent = state.transactions.reduce((acc, t) => acc + t.value, 0);
+      const remainingBalance = state.initialBudget - totalSpent;
+      const usagePercentage = state.initialBudget > 0 ? (totalSpent / state.initialBudget) * 100 : 0;
+
+      return {
+        initialBudget: state.initialBudget,
+        totalSpent,
+        remainingBalance,
+        usagePercentage
+      };
+    }
+
+    // MAIN UPDATE FUNCTION
+    function updateApp() {
+      const metrics = calculateMetrics();
+
+      // 1. Update Cards
+      document.getElementById('cardInitialValue').innerText = formatCurrency(metrics.initialBudget);
+      document.getElementById('cardTotalSpent').innerText = formatCurrency(metrics.totalSpent);
+      document.getElementById('cardRemainingBalance').innerText = formatCurrency(metrics.remainingBalance);
+      document.getElementById('cardExpensesCount').innerText = `${state.transactions.length} lançamento(s)`;
+
+      const percText = metrics.usagePercentage.toFixed(1) + '%';
+      document.getElementById('cardUsagePercentage').innerText = percText;
+
+      const remPerc = state.initialBudget > 0 ? Math.max(0, 100 - metrics.usagePercentage).toFixed(1) : 0;
+      document.getElementById('cardBalancePercentage').innerText = `${remPerc}% disponível`;
+
+      // Progress bar color & width
+      const pBar = document.getElementById('usageProgressBar');
+      pBar.style.width = `${Math.min(metrics.usagePercentage, 100)}%`;
+
+      if (metrics.usagePercentage >= 90 && state.initialBudget > 0) {
+        pBar.className = "bg-rose-500 h-full transition-all duration-500";
+        document.getElementById('cardRemainingBalance').className = "text-2xl font-bold text-rose-400";
+      } else if (metrics.usagePercentage >= 70 && state.initialBudget > 0) {
+        pBar.className = "bg-amber-500 h-full transition-all duration-500";
+        document.getElementById('cardRemainingBalance').className = "text-2xl font-bold text-amber-400";
+      } else {
+        pBar.className = "bg-emerald-500 h-full transition-all duration-500";
+        document.getElementById('cardRemainingBalance').className = "text-2xl font-bold text-emerald-400";
+      }
+
+      // 2. Alert Banner & Status Badge
+      updateAlerts(metrics);
+
+      // 3. Render Transactions Table
+      renderTable();
+
+      // 4. Update Chart
+      updateChartData();
+
+      // 5. Update Robot Mood
+      updateBotMood(metrics);
+    }
+
+    // UPDATE ALERTS & STATUS BADGE
+    function updateAlerts(metrics) {
+      const banner = document.getElementById('alertBanner');
+      const bIcon = document.getElementById('alertBannerIcon');
+      const bTitle = document.getElementById('alertBannerTitle');
+      const bMsg = document.getElementById('alertBannerMessage');
+
+      const sBadge = document.getElementById('statusBadge');
+      const sBadgeText = document.getElementById('statusBadgeText');
+
+      if (metrics.initialBudget === 0 && state.transactions.length === 0) {
+        banner.classList.add('hidden');
+        sBadge.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 bg-slate-700/50 text-slate-300 border border-slate-600/50";
+        sBadgeText.innerText = "Aguardando Dados";
+        return;
+      }
+
+      if (metrics.usagePercentage >= 100 && metrics.initialBudget > 0) {
+        banner.classList.remove('hidden');
+        banner.className = "p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 bg-rose-500/10 border-rose-500/30 text-rose-300";
+        bIcon.className = "w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 bg-rose-500/20 text-rose-400";
+        bIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+        bTitle.innerText = "ATENÇÃO CRÍTICA: Orçamento Estourado!";
+        bMsg.innerText = `Você ultrapassou seu valor inicial em ${formatCurrency(Math.abs(metrics.remainingBalance))}. Evite novos gastos!`;
+
+        sBadge.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        sBadgeText.innerText = "Orçamento Estourado";
+      } 
+      else if (metrics.usagePercentage >= 90 && metrics.initialBudget > 0) {
+        banner.classList.remove('hidden');
+        banner.className = "p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 bg-rose-500/10 border-rose-500/30 text-rose-300";
+        bIcon.className = "w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 bg-rose-500/20 text-rose-400";
+        bIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+        bTitle.innerText = "ALERTA VERMELHO: Mais de 90% do orçamento consumido!";
+        bMsg.innerText = `Resta apenas ${formatCurrency(metrics.remainingBalance)}. Reduza despesas não essenciais imediatamente.`;
+
+        sBadge.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        sBadgeText.innerText = "Alerta Vermelho";
+      } 
+      else if (metrics.usagePercentage >= 70 && metrics.initialBudget > 0) {
+        banner.classList.remove('hidden');
+        banner.className = "p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 bg-amber-500/10 border-amber-500/30 text-amber-300";
+        bIcon.className = "w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 bg-amber-500/20 text-amber-400";
+        bIcon.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i>`;
+        bTitle.innerText = "ATENÇÃO: Você atingiu 70% do seu limite!";
+        bMsg.innerText = `Você já utilizou ${metrics.usagePercentage.toFixed(1)}% do valor total. Mantenha o foco até o final do período.`;
+
+        sBadge.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20";
+        sBadgeText.innerText = "Atenção nos Gastos";
+      } 
+      else {
+        banner.classList.add('hidden');
+        sBadge.className = "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        sBadgeText.innerText = "Gastos Sob Controle";
+      }
+    }
+
+    // RENDER TABLE
+    function renderTable() {
+      const tbody = document.getElementById('transactionsTableBody');
+      const emptyState = document.getElementById('emptyState');
+      const countBadge = document.getElementById('transactionsCountBadge');
+
+      countBadge.innerText = `${state.transactions.length} item(ns)`;
+
+      if (state.transactions.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      
+      const catIcons = {
+        'Alimentação': '🍔',
+        'Moradia': '🏠',
+        'Transporte': '🚗',
+        'Lazer': '🎉',
+        'Saúde': '⚕️',
+        'Educação': '📚',
+        'Outros': '📦'
+      };
+
+      tbody.innerHTML = state.transactions.map(t => {
+        const formattedDate = new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR');
+        const icon = catIcons[t.category] || '📦';
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors">
+            <td class="py-3 px-4 font-mono text-slate-400">${formattedDate}</td>
+            <td class="py-3 px-4 font-medium text-slate-200">${t.description}</td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] bg-slate-800 border border-slate-700 text-slate-300">
+                ${icon} ${t.category}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right font-semibold text-rose-400">${formatCurrency(t.value)}</td>
+            <td class="py-3 px-4 text-center">
+              <button onclick="deleteTransaction('${t.id}')" title="Excluir" class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-all">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // INITIALIZE CHART JS
+    function initChart() {
+      const ctx = document.getElementById('expensesChart').getContext('2d');
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Saldo Restante (R$)',
+              data: [],
+              borderColor: '#22d3ee',
+              backgroundColor: 'rgba(34, 211, 238, 0.08)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 3,
+              pointBackgroundColor: '#22d3ee',
+              pointRadius: 4,
+              pointHoverRadius: 6
+            },
+            {
+              label: 'Gastos Acumulados (R$)',
+              data: [],
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.05)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2,
+              borderDash: [4, 4],
+              pointBackgroundColor: '#f43f5e',
+              pointRadius: 3,
+              pointHoverRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 10,
+              displayColors: true,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(51, 65, 85, 0.3)',
+              },
+              ticks: {
+                color: '#94a3b8',
+                font: { size: 11 }
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(51, 65, 85, 0.4)',
+              },
+              ticks: {
+                color: '#94a3b8',
+                font: { size: 11 },
+                callback: function(value) {
+                  return 'R$ ' + value;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // UPDATE CHART DATA DYNAMICALLY
+    function updateChartData() {
+      if (!chartInstance) return;
+
+      const metrics = calculateMetrics();
+
+      if (state.transactions.length === 0) {
+        const todayStr = new Date().toLocaleDateString('pt-BR');
+        chartInstance.data.labels = ['Início', todayStr];
+        chartInstance.data.datasets[0].data = [state.initialBudget, state.initialBudget];
+        chartInstance.data.datasets[1].data = [0, 0];
+        
+        chartInstance.data.datasets[0].borderColor = '#22d3ee';
+        chartInstance.data.datasets[0].pointBackgroundColor = '#22d3ee';
+        chartInstance.update();
+        return;
+      }
+
+      const dates = [...new Set(state.transactions.map(t => t.date))].sort();
+
+      let labels = ['Início'];
+      let balanceData = [state.initialBudget];
+      let accumulatedSpentData = [0];
+
+      let currentAccumulated = 0;
+
+      dates.forEach(d => {
+        const daySpent = state.transactions
+          .filter(t => t.date === d)
+          .reduce((sum, t) => sum + t.value, 0);
+
+        currentAccumulated += daySpent;
+        const remaining = state.initialBudget - currentAccumulated;
+
+        const formattedD = new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+        labels.push(formattedD);
+        balanceData.push(remaining);
+        accumulatedSpentData.push(currentAccumulated);
+      });
+
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets[0].data = balanceData;
+      chartInstance.data.datasets[1].data = accumulatedSpentData;
+
+      if (metrics.usagePercentage >= 90 && state.initialBudget > 0) {
+        chartInstance.data.datasets[0].borderColor = '#f43f5e';
+        chartInstance.data.datasets[0].pointBackgroundColor = '#f43f5e';
+      } else if (metrics.usagePercentage >= 70 && state.initialBudget > 0) {
+        chartInstance.data.datasets[0].borderColor = '#f59e0b';
+        chartInstance.data.datasets[0].pointBackgroundColor = '#f59e0b';
+      } else {
+        chartInstance.data.datasets[0].borderColor = '#22d3ee';
+        chartInstance.data.datasets[0].pointBackgroundColor = '#22d3ee';
+      }
+
+      chartInstance.update();
+    }
+
+    // BOT REACTION EVENTS FOR VARIOUS ACTIONS
+    function triggerBotReaction(actionType, extraData = null) {
+      const speech = document.getElementById('botSpeech');
+      const metrics = calculateMetrics();
+      let textToSpeak = "";
+
+      if (actionType === 'add_expense') {
+        const cat = extraData.category;
+        const val = extraData.value;
+
+        if (metrics.usagePercentage >= 90 && state.initialBudget > 0) {
+          speech.innerHTML = `⚠️ <b>Atenção!</b> Você adicionou <b>"${extraData.description}"</b> por ${formatCurrency(val)}. Seu orçamento está em <b>${metrics.usagePercentage.toFixed(1)}%</b>!`;
+          textToSpeak = `Atenção! Você adicionou ${extraData.description} no valor de ${formatCurrency(val)}. Seu orçamento já atingiu ${metrics.usagePercentage.toFixed(0)} por cento! Reduza os gastos!`;
+        } else {
+          speech.innerHTML = `📝 Gasto registrado: <b>${extraData.description}</b> (${formatCurrency(val)} - ${cat}). Saldo atual: <b>${formatCurrency(metrics.remainingBalance)}</b>.`;
+          textToSpeak = `Gasto de ${extraData.description} no valor de ${formatCurrency(val)} registrado com sucesso. Seu saldo restante é de ${formatCurrency(metrics.remainingBalance)}.`;
+        }
+      } 
+      else if (actionType === 'delete_expense') {
+        speech.innerHTML = `🗑️ Transação removida! Seu saldo atualizado é de <b>${formatCurrency(metrics.remainingBalance)}</b>.`;
+        textToSpeak = `Transação removida. Seu saldo atualizado é de ${formatCurrency(metrics.remainingBalance)}.`;
+      } 
+      else if (actionType === 'reset') {
+        speech.innerHTML = `🔄 Dados reiniciados com sucesso! Digite suas novas informações para recomeçar.`;
+        textToSpeak = `Dados reiniciados com sucesso. Digite suas informações para recomeçar.`;
+      }
+
+      speakText(textToSpeak);
+    }
+
+    // ROBOT MOOD AND VISUAL AVATAR EXPRESSIONS
+    function updateBotMood(metrics) {
+      const avatar = document.getElementById('robotAvatar');
+      const moodTag = document.getElementById('botMoodTag');
+      const eyeL = document.getElementById('robotEyeLeft');
+      const eyeR = document.getElementById('robotEyeRight');
+      const mouth = document.getElementById('robotMouth');
+      const antenna = document.getElementById('robotAntennaLight');
+
+      if (!avatar || !moodTag) return;
+
+      if (metrics.usagePercentage >= 90 && state.initialBudget > 0) {
+        moodTag.innerText = "Preocupado 😨";
+        moodTag.className = "text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-medium";
+
+        avatar.className = "w-24 h-24 rounded-3xl bg-slate-800 border-2 border-rose-500 flex flex-col items-center justify-center shadow-lg shadow-rose-500/30 transition-all duration-300 relative";
+        antenna.className = "w-3 h-3 rounded-full bg-rose-500 animate-ping";
+
+        if (eyeL) eyeL.className = "w-4 h-4 rounded-full bg-rose-400 flex items-center justify-center transition-all duration-300";
+        if (eyeR) eyeR.className = "w-4 h-4 rounded-full bg-rose-400 flex items-center justify-center transition-all duration-300";
+        if (mouth) mouth.className = "w-8 h-2 bg-rose-500 rounded-lg transition-all duration-300";
+      } 
+      else if (metrics.usagePercentage >= 70 && state.initialBudget > 0) {
+        moodTag.innerText = "Alerta ⚠️";
+        moodTag.className = "text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium";
+
+        avatar.className = "w-24 h-24 rounded-3xl bg-slate-800 border-2 border-amber-400 flex flex-col items-center justify-center shadow-lg shadow-amber-500/30 transition-all duration-300 relative";
+        antenna.className = "w-3 h-3 rounded-full bg-amber-400 animate-pulse";
+
+        if (eyeL) eyeL.className = "w-4 h-4 rounded-full bg-amber-300 flex items-center justify-center transition-all duration-300";
+        if (eyeR) eyeR.className = "w-4 h-4 rounded-full bg-amber-300 flex items-center justify-center transition-all duration-300";
+        if (mouth) mouth.className = "w-7 h-1.5 bg-amber-400 rounded-full transition-all duration-300";
+      } 
+      else {
+        moodTag.innerText = "Pronto 😊";
+        moodTag.className = "text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium";
+
+        avatar.className = "w-24 h-24 rounded-3xl bg-slate-800 border-2 border-cyan-400 flex flex-col items-center justify-center shadow-lg shadow-cyan-500/20 transition-all duration-300 relative";
+        antenna.className = "w-3 h-3 rounded-full bg-cyan-400 animate-ping";
+
+        if (eyeL) eyeL.className = "w-4 h-4 rounded-full bg-cyan-300 flex items-center justify-center transition-all duration-300";
+        if (eyeR) eyeR.className = "w-4 h-4 rounded-full bg-cyan-300 flex items-center justify-center transition-all duration-300";
+        if (mouth) mouth.className = "w-8 h-1.5 bg-cyan-400 rounded-full transition-all duration-300";
+      }
+    }
+
+    // FETCH REAL TIME CURRENCY RATES (USD & EUR)
+    async function fetchCurrencyRates() {
+      const refreshIcon = document.getElementById('refreshRatesIcon');
+      if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+      try {
+        const response = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.USDBRL) {
+            state.rates.USD = parseFloat(data.USDBRL.bid);
+            state.rates.usdVar = parseFloat(data.USDBRL.pctChange).toFixed(2);
+          }
+          if (data.EURBRL) {
+            state.rates.EUR = parseFloat(data.EURBRL.bid);
+            state.rates.eurVar = parseFloat(data.EURBRL.pctChange).toFixed(2);
+          }
+        }
+      } catch (err) {
+        console.log('Usando valores padrão de cotação:', err);
+      } finally {
+        if (refreshIcon) {
+          setTimeout(() => refreshIcon.classList.remove('animate-spin'), 600);
+        }
+        updateCurrencyUI();
+        calculateExchangeSimulation();
+      }
+    }
+
+    // UPDATE CURRENCY DISPLAY
+    function updateCurrencyUI() {
+      const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      document.getElementById('usdPrice').innerText = formatCurrency(state.rates.USD);
+      const usdVarElem = document.getElementById('usdVar');
+      usdVarElem.innerText = `Var: ${state.rates.usdVar}%`;
+      usdVarElem.className = state.rates.usdVar >= 0 ? "text-[10px] text-emerald-400" : "text-[10px] text-rose-400";
+
+      document.getElementById('eurPrice').innerText = formatCurrency(state.rates.EUR);
+      const eurVarElem = document.getElementById('eurVar');
+      eurVarElem.innerText = `Var: ${state.rates.eurVar}%`;
+      eurVarElem.className = state.rates.eurVar >= 0 ? "text-[10px] text-emerald-400" : "text-[10px] text-rose-400";
+
+      document.getElementById('usdUpdateTime').innerText = `Hoje às ${timeStr}`;
+      document.getElementById('eurUpdateTime').innerText = `Hoje às ${timeStr}`;
+    }
+
+    // CALCULATE EXCHANGE SIMULATION
+    function calculateExchangeSimulation() {
+      const curr = document.getElementById('simCurrency').value;
+      const amountInput = document.getElementById('simAmount');
+      let amount = parseFloat(amountInput.value);
+
+      if (isNaN(amount) || amount < 0) amount = 0;
+
+      const rate = curr === 'USD' ? state.rates.USD : state.rates.EUR;
+      const totalBrl = amount * rate;
+
+      const totalBrlElem = document.getElementById('simTotalBrl');
+      totalBrlElem.innerHTML = `<span>${formatCurrency(totalBrl)}</span><i class="fa-solid fa-arrow-right-arrow-left text-[10px] opacity-60"></i>`;
+
+      const symbol = curr === 'USD' ? 'US$' : '€';
+      const summaryElem = document.getElementById('simSummaryText');
+      summaryElem.innerText = `Simulação: ${symbol} ${amount.toLocaleString('pt-BR')} = ${formatCurrency(totalBrl)}`;
+    }
+
+    // BOT ADVICE ON CURRENCY SIMULATION
+    function speakSimulationAdvice() {
+      const curr = document.getElementById('simCurrency').value;
+      const amount = parseFloat(document.getElementById('simAmount').value) || 0;
+      const rate = curr === 'USD' ? state.rates.USD : state.rates.EUR;
+      const totalBrl = amount * rate;
+      const currName = curr === 'USD' ? 'Dólares' : 'Euros';
+      
+      const metrics = calculateMetrics();
+      const percentOfBalance = metrics.remainingBalance > 0 ? (totalBrl / metrics.remainingBalance) * 100 : 100;
+
+      const speech = document.getElementById('botSpeech');
+      let textToSpeak = "";
+
+      if (totalBrl > metrics.remainingBalance && metrics.initialBudget > 0) {
+        speech.innerHTML = `🚨 <b>Alerta de Câmbio:</b> Para comprar <b>${amount} ${currName}</b> você precisa de <b>${formatCurrency(totalBrl)}</b>. Isso supera seu saldo livre atual de ${formatCurrency(metrics.remainingBalance)}!`;
+        textToSpeak = `Atenção! A compra de ${amount} ${currName} custará ${formatCurrency(totalBrl)}. Esse valor é maior do que o seu saldo livre atual de ${formatCurrency(metrics.remainingBalance)}. Cuidado para não se endividar!`;
+      } else {
+        speech.innerHTML = `💱 <b>Simulação de Câmbio:</b> A compra de <b>${amount} ${currName}</b> custa <b>${formatCurrency(totalBrl)}</b>.`;
+        textToSpeak = `Para comprar ${amount} ${currName}, você gastará ${formatCurrency(totalBrl)}.`;
+      }
+
+      speakText(textToSpeak);
+    }
+
+    // BOT ADVICE SYSTEM ON BUTTON CLICK
+    function askBotForAdvice(type) {
+      const speech = document.getElementById('botSpeech');
+      const metrics = calculateMetrics();
+      let textToSpeak = "";
+
+      if (type === 'rule') {
+        if (metrics.initialBudget === 0) {
+          speech.innerHTML = `💡 Informe seu valor inicial no formulário para calcularmos a divisão 50/30/20 ideal!`;
+          textToSpeak = `Informe seu valor inicial no formulário para calcularmos a divisão 50 30 20 ideal.`;
+        } else {
+          const needs = (metrics.initialBudget * 0.50);
+          const wants = (metrics.initialBudget * 0.30);
+          const savings = (metrics.initialBudget * 0.20);
+          speech.innerHTML = `📊 <b>Regra 50/30/20 recomendada:</b><br>` +
+            `• <b>50% Necessidades:</b> ${formatCurrency(needs)}<br>` +
+            `• <b>30% Desejos/Lazer:</b> ${formatCurrency(wants)}<br>` +
+            `• <b>20% Poupança/Investimento:</b> ${formatCurrency(savings)}`;
+
+          textToSpeak = `Pela regra 50 30 20, você deve destinar 50% para necessidades (${formatCurrency(needs)}), 30% para desejos (${formatCurrency(wants)}) e 20% para investimentos (${formatCurrency(savings)}).`;
+        }
+      }
+      else if (type === 'emergency') {
+        const targetReserve = metrics.totalSpent > 0 ? metrics.totalSpent * 6 : metrics.initialBudget * 3;
+        speech.innerHTML = `🛡️ <b>Reserva de Emergência Ideal:</b><br>` +
+          `Recomendo acumular de 3 a 6 meses do seu custo de vida. ${targetReserve > 0 ? 'Sua meta estimada é de <b>' + formatCurrency(targetReserve) + '</b>.' : 'Guarde um pouco todo mês!'}`;
+
+        textToSpeak = `Recomendo acumular de 3 a 6 meses do seu custo de vida como reserva de emergência. Guarde um pouco todo mês!`;
+      }
+      else if (type === 'cut') {
+        const catTotals = {};
+        state.transactions.forEach(t => {
+          catTotals[t.category] = (catTotals[t.category] || 0) + t.value;
+        });
+
+        let highestCat = '';
+        let maxVal = 0;
+        for (let cat in catTotals) {
+          if (catTotals[cat] > maxVal) {
+            maxVal = catTotals[cat];
+            highestCat = cat;
+          }
+        }
+
+        if (highestCat && metrics.totalSpent > 0) {
+          const catPerc = ((maxVal / metrics.totalSpent) * 100).toFixed(0);
+          speech.innerHTML = `✂️ <b>Dica de Corte:</b> Sua maior categoria de consumo é <b>${highestCat}</b> com ${formatCurrency(maxVal)} (${catPerc}% dos gastos). Tente reduzir 15% dessa categoria para economizar <b>${formatCurrency(maxVal * 0.15)}</b>!`;
+          
+          textToSpeak = `Sua maior categoria de consumo atual é ${highestCat}, totalizando ${formatCurrency(maxVal)}. Reduzindo 15 por cento você economizará ${formatCurrency(maxVal * 0.15)}.`;
+        } else {
+          speech.innerHTML = `✂️ Lance algumas despesas primeiro para que eu possa analisar qual categoria consome mais do seu dinheiro!`;
+          textToSpeak = `Lance algumas despesas primeiro para que eu possa analisar qual categoria consome mais do seu dinheiro.`;
+        }
+      }
+      else if (type === 'status') {
+        if (metrics.initialBudget === 0 && state.transactions.length === 0) {
+          speech.innerHTML = `📋 Por favor, insira o valor inicial e seus gastos para gerar um diagnóstico completo.`;
+          textToSpeak = `Por favor, insira o valor inicial e seus gastos para gerar um diagnóstico completo.`;
+        } else if (metrics.usagePercentage >= 90) {
+          speech.innerHTML = `🚨 <b>Diagnóstico Crítico:</b> Você usou ${metrics.usagePercentage.toFixed(1)}% do orçamento. Pare compras supérfluas e foque em cobrir apenas contas essenciais.`;
+          textToSpeak = `Diagnóstico crítico! Você usou ${metrics.usagePercentage.toFixed(1)} por cento do seu orçamento. Reduza os gastos!`;
+        } else if (metrics.usagePercentage >= 70) {
+          speech.innerHTML = `⚠️ <b>Diagnóstico Moderado:</b> Você já utilizou ${metrics.usagePercentage.toFixed(1)}%. Restam ${formatCurrency(metrics.remainingBalance)}. Desacelere os gastos!`;
+          textToSpeak = `Diagnóstico de alerta. Você já utilizou ${metrics.usagePercentage.toFixed(1)} por cento do orçamento. Restam ${formatCurrency(metrics.remainingBalance)}.`;
+        } else {
+          speech.innerHTML = `🌟 <b>Diagnóstico Excelente:</b> Seu ritmo de consumo está em ${metrics.usagePercentage.toFixed(1)}%. Você tem ${formatCurrency(metrics.remainingBalance)} livres!`;
+          textToSpeak = `Diagnóstico excelente! Seu ritmo de consumo está em apenas ${metrics.usagePercentage.toFixed(1)} por cento.`;
+        }
+      }
+
+      speakText(textToSpeak);
+    }
+  </script>
+</body>
+</html>
